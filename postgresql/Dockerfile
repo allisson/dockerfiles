@@ -1,4 +1,4 @@
-# Mysql
+# Postgresql
 #
 # VERSION               0.1
 
@@ -21,20 +21,25 @@ RUN dpkg-divert --divert /usr/bin/ischroot.debianutils --rename /usr/bin/ischroo
 RUN ln -s /bin/true /usr/bin/ischroot
 
 # upgrade distro
-RUN apt-get update && apt-get upgrade -y
+RUN apt-get update && apt-get upgrade -y 
 RUN locale-gen en_US
 RUN apt-get install lsb-release -y
 
 # install packages
-RUN apt-get install -y openssh-server mysql-server supervisor
+RUN apt-get install -y openssh-server postgresql supervisor
 
 # make /var/run/sshd
 RUN mkdir /var/run/sshd
 
-# setup mysql
-RUN sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
-ADD set-mysql-password.sh /tmp/set-mysql-password.sh
-RUN /bin/sh /tmp/set-mysql-password.sh
+# copy supervisor conf
+ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# setup postgresql
+ADD set-psql-password.sh /tmp/set-psql-password.sh
+RUN /bin/sh /tmp/set-psql-password.sh
+RUN sed -i "/^#listen_addresses/i listen_addresses='*'" /etc/postgresql/9.1/main/postgresql.conf
+RUN sed -i "/^# DO NOT DISABLE\!/i # Allow access from any IP address" /etc/postgresql/9.1/main/pg_hba.conf
+RUN sed -i "/^# DO NOT DISABLE\!/i host all all 0.0.0.0/0 md5\n\n\n" /etc/postgresql/9.1/main/pg_hba.conf
 
 # set root password
 RUN echo "root:root" | chpasswd
@@ -43,11 +48,8 @@ RUN echo "root:root" | chpasswd
 RUN apt-get clean
 RUN rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
 
-# expose mysql port
-EXPOSE 22 3306
-
-# copy supervisor conf
-ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# expose postgresql port
+EXPOSE 22 5432
 
 # start supervisor
 CMD ["/usr/bin/supervisord"]

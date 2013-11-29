@@ -1,3 +1,3 @@
 /usr/sbin/mysqld &
-sleep 2
+sleep 10
 echo "GRANT ALL ON *.* TO root@'%' IDENTIFIED BY 'root' WITH GRANT OPTION; FLUSH PRIVILEGES" | mysql
